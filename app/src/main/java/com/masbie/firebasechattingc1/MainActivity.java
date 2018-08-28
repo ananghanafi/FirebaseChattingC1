@@ -1,144 +1,141 @@
 package com.masbie.firebasechattingc1;
 
-import android.content.Intent;
-import android.support.annotation.NonNull;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
+import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
-import android.widget.ListView;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
-import android.text.format.DateFormat;
 
-import com.firebase.ui.auth.AuthUI;
-import com.firebase.ui.database.FirebaseListAdapter;
-import com.github.library.bubbleview.BubbleTextView;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.FirebaseDatabase;
-
-import hani.momanii.supernova_emoji_library.Actions.EmojIconActions;
-import hani.momanii.supernova_emoji_library.Helper.EmojiconEditText;
-import hani.momanii.supernova_emoji_library.Helper.EmojiconTextView;
+import com.firebase.client.Firebase;
+import com.firebase.client.FirebaseError;
+import com.firebase.client.Query;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static int SIGN_IN_REQUEST_CODE = 1;
-    private FirebaseListAdapter<ChatMessage> adapter;
-    RelativeLayout activity_main;
+    public static String TAG = "FirebaseUI.chat";
+    private Firebase mRef;
+    private Query mChatRef;
+    private long userId = 2;
+    private String mName = "Upin";
+    private String mTime;
+    private Button mSendButton;
+    private EditText mMessageEdit;
 
-    //Add Emojicon
-    EmojiconEditText emojiconEditText;
-    ImageView emojiButton,submitButton;
-    EmojIconActions emojIconActions;
-
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if(item.getItemId() == R.id.menu_sign_out)
-        {
-            AuthUI.getInstance().signOut(this).addOnCompleteListener(new OnCompleteListener<Void>() {
-                @Override
-                public void onComplete(@NonNull Task<Void> task) {
-                    Snackbar.make(activity_main,"You have been signed out.", Snackbar.LENGTH_SHORT).show();
-                    finish();
-                }
-            });
-        }
-        return true;
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main_menu,menu);
-        return true;
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == SIGN_IN_REQUEST_CODE)
-        {
-            if(resultCode == RESULT_OK)
-            {
-                Snackbar.make(activity_main,"Successfully signed in.Welcome!", Snackbar.LENGTH_SHORT).show();
-                displayChatMessage();
-            }
-            else{
-                Snackbar.make(activity_main,"We couldn't sign you in.Please try again later", Snackbar.LENGTH_SHORT).show();
-                finish();
-            }
-        }
-    }
+    private RecyclerView mMessages;
+    private com.logbook29.firebasechat.FirebaseRecyclerAdapter<com.logbook29.firebasechat.ChatModel, ChatHolder> mRecycleViewAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Firebase.setAndroidContext(this);
 
-        activity_main = (RelativeLayout)findViewById(R.id.activity_main);
+        mSendButton = (Button) findViewById(R.id.sendButton);
+        mMessageEdit = (EditText) findViewById(R.id.messageEdit);
 
-        //Add Emoji
-        emojiButton = (ImageView)findViewById(R.id.emoji_button);
-        submitButton = (ImageView)findViewById(R.id.submit_button);
-        emojiconEditText = (EmojiconEditText)findViewById(R.id.emojicon_edit_text);
-        emojIconActions = new EmojIconActions(getApplicationContext(),activity_main,emojiButton,emojiconEditText);
-        emojIconActions.ShowEmojicon();
-
-        submitButton.setOnClickListener(new View.OnClickListener() {
+        mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                FirebaseDatabase.getInstance().getReference().push().setValue(new ChatMessage(emojiconEditText.getText().toString(),
-                        FirebaseAuth.getInstance().getCurrentUser().getEmail()));
-                emojiconEditText.setText("");
-                emojiconEditText.requestFocus();
+//                showFirebaseLoginPrompt();
             }
         });
 
-        //Check if not sign-in then navigate Signin page
-        if(FirebaseAuth.getInstance().getCurrentUser() == null)
-        {
-            startActivityForResult(AuthUI.getInstance().createSignInIntentBuilder().build(),SIGN_IN_REQUEST_CODE);
-        }
-        else
-        {
-            Snackbar.make(activity_main,"Welcome "+FirebaseAuth.getInstance().getCurrentUser().getEmail(),Snackbar.LENGTH_SHORT).show();
-            //Load content
-            displayChatMessage();
-        }
 
 
-    }
+        mRef = new Firebase("https://wirasetiawan29.firebaseio.com/chat");
+        mChatRef = mRef.limitToLast(50);
 
-
-
-    private void displayChatMessage() {
-
-        ListView listOfMessage = (ListView)findViewById(R.id.list_of_message);
-        adapter = new FirebaseListAdapter<ChatMessage>(this,ChatMessage.class,R.layout.list_item,FirebaseDatabase.getInstance().getReference())
-        {
+        mSendButton.setOnClickListener(new View.OnClickListener() {
             @Override
-            protected void populateView(View v, ChatMessage model, int position) {
+            public void onClick(View v) {
+                com.logbook29.firebasechat.ChatModel chat = new com.logbook29.firebasechat.ChatModel(mMessageEdit.getText().toString(), mName, userId, System.currentTimeMillis(), mTime);
+                mRef.push().setValue(chat, new Firebase.CompletionListener() {
+                    @Override
+                    public void onComplete(FirebaseError firebaseError, Firebase firebase) {
+                        if (firebaseError != null) {
+                            Log.e(TAG, firebaseError.toString());
+                        }
+                    }
+                });
+                mMessageEdit.setText("");
+            }
+        });
 
-                //Get references to the views of list_item.xml
-                TextView messageText, messageUser, messageTime;
-                messageText = (BubbleTextView) v.findViewById(R.id.message_text);
-                messageUser = (TextView) v.findViewById(R.id.message_user);
-                messageTime = (TextView) v.findViewById(R.id.message_time);
+        mMessages = (RecyclerView) findViewById(R.id.messagesList);
 
-                messageText.setText(model.getMessageText());
-                messageUser.setText(model.getMessageUser());
-                messageTime.setText(DateFormat.format("dd-MM-yyyy (HH:mm:ss)", model.getMessageTime()));
+        LinearLayoutManager manager = new LinearLayoutManager(this);
+        manager.setReverseLayout(false);
 
+        mMessages.setHasFixedSize(false);
+        mMessages.setLayoutManager(manager);
+
+        mRecycleViewAdapter = new com.logbook29.firebasechat.FirebaseRecyclerAdapter<com.logbook29.firebasechat.ChatModel, ChatHolder>(com.logbook29.firebasechat.ChatModel.class, R.layout.text_message, ChatHolder.class, mChatRef) {
+            @Override
+            public void populateViewHolder(ChatHolder chatView, com.logbook29.firebasechat.ChatModel chat, int position) {
+                chatView.setText(chat.getMessage());
+                chatView.setName(chat.getName());
+                chatView.setTime(chat.getFormattedTime());
+
+
+                if (chat.getUserId() == 2) {
+                    chatView.setIsSender(true);
+                } else {
+                    chatView.setIsSender(false);
+                }
             }
         };
-        listOfMessage.setAdapter(adapter);
+
+        mMessages.setAdapter(mRecycleViewAdapter);
     }
+
+    public static class ChatHolder extends RecyclerView.ViewHolder {
+        View mView;
+
+        public ChatHolder(View itemView) {
+            super(itemView);
+            mView = itemView;
+        }
+
+        public void setIsSender(Boolean isSender) {
+            FrameLayout left_arrow = (FrameLayout) mView.findViewById(R.id.left_arrow);
+            FrameLayout right_arrow = (FrameLayout) mView.findViewById(R.id.right_arrow);
+            RelativeLayout messageContainer = (RelativeLayout) mView.findViewById(R.id.message_container);
+            LinearLayout message = (LinearLayout) mView.findViewById(R.id.message);
+
+
+            if (isSender) {
+                left_arrow.setVisibility(View.GONE);
+                right_arrow.setVisibility(View.VISIBLE);
+                messageContainer.setGravity(Gravity.RIGHT);
+            } else {
+                left_arrow.setVisibility(View.VISIBLE);
+                right_arrow.setVisibility(View.GONE);
+                messageContainer.setGravity(Gravity.LEFT);
+            }
+        }
+
+        public void setName(String name) {
+            TextView field = (TextView) mView.findViewById(R.id.name_text);
+            field.setText(name);
+        }
+
+        public void setText(String text) {
+            TextView field = (TextView) mView.findViewById(R.id.message_text);
+            field.setText(text);
+        }
+
+        public void setTime(String time){
+            TextView field = (TextView) mView.findViewById(R.id.time_text);
+            field.setText(time);
+        }
+    }
+
 }
