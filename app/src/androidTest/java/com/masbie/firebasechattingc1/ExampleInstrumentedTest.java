@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getTargetContext();
 
-        assertEquals("com.masbie.firebasechattingc1", appContext.getPackageName());
+        Assert.assertEquals("com.masbie.firebasechattingc1", appContext.getPackageName());
     }
 }
