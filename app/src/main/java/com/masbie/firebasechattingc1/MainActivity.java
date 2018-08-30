@@ -33,6 +33,8 @@ public class MainActivity extends AppCompatActivity {
     private RecyclerView mMessages;
     private FirebaseRecyclerAdapter<ChatModel, ChatHolder> mRecycleViewAdapter;
 
+
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
