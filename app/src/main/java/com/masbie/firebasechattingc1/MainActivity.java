@@ -19,6 +19,8 @@ import com.firebase.client.FirebaseError;
 import com.firebase.client.Query;
 
 
+
+
 public class MainActivity extends AppCompatActivity {
 
     public static String TAG = "FirebaseUI.chat";
